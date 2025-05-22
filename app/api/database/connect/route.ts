@@ -3,65 +3,58 @@ import {
   connectToDatabase,
   getDatabaseSchema,
   closeConnection,
-} from "@/lib/database";
+} from "@/lib/databases_sqlserver";
 import { ApiResponse, ConnectionState, DatabaseSchema } from "@/lib/types";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-// Handle POST requests to /api/database/connect
+// POST: /api/database/connect
 export async function POST(request: NextRequest) {
   try {
     const requestData = await request.json();
 
-    // Set environment variables from request data for MSSQL
-    process.env.SQL_SERVER = requestData.server;
-    process.env.SQL_DATABASE = requestData.database;
+    // Set environment variables for MSSQL from request
+    process.env.SQL_SERVER = requestData.host;
+    process.env.SQL_PORT = requestData.port.toString();
     process.env.SQL_USER = requestData.user;
     process.env.SQL_PASSWORD = requestData.password;
-    process.env.SQL_ENCRYPT = requestData.encrypt ? "true" : "false";
+    process.env.SQL_DATABASE = requestData.database;
+    process.env.SQL_ENCRYPT = requestData.encrypt?.toString() ?? "false";
 
-    // Try to connect to the database
     const connection = await connectToDatabase();
-
-    // If connection successful, get schema information
     const schema = await getDatabaseSchema(connection);
-
-    // Close the connection
     await closeConnection(connection);
 
-    // Store connection info in cookies
     const cookieStore = cookies();
-
-    // Store connection parameters in cookies (except password)
-    cookieStore.set("db_server", requestData.server, {
+    cookieStore.set("db_host", requestData.host, {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60 * 24, // 1 day
+      maxAge: 86400,
     });
-
-    cookieStore.set("db_database", requestData.database, {
+    cookieStore.set("db_port", requestData.port.toString(), {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge: 86400,
     });
-
     cookieStore.set("db_user", requestData.user, {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge: 86400,
     });
-
-    cookieStore.set("db_encrypt", requestData.encrypt ? "true" : "false", {
+    cookieStore.set("db_database", requestData.database, {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge: 86400,
     });
-
-    // Store connection status
+    // cookieStore.set("db_encrypt", process.env.SQL_ENCRYPT, {
+    //   httpOnly: true,
+    //   path: "/",
+    //   maxAge: 86400,
+    // });
     cookieStore.set("db_connected", "true", {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge: 86400,
     });
 
     const response: ApiResponse<DatabaseSchema> = {
@@ -73,102 +66,91 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Database connection error:", error);
 
-    const response: ApiResponse<null> = {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to connect to database",
-    };
-
-    return NextResponse.json(response, { status: 500 });
+    return NextResponse.json<ApiResponse<null>>(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to connect to database",
+      },
+      { status: 500 }
+    );
   }
 }
 
-// Handle GET requests to /api/database/connect
+// GET: /api/database/connect
 export async function GET() {
   try {
     const cookieStore = cookies();
     const isConnected = cookieStore.get("db_connected")?.value === "true";
 
     if (!isConnected) {
-      const response: ApiResponse<ConnectionState> = {
+      return NextResponse.json<ApiResponse<ConnectionState>>({
         success: true,
-        data: {
-          isConnected: false,
-        },
-      };
-
-      return NextResponse.json(response);
+        data: { isConnected: false },
+      });
     }
 
-    // Get connection parameters from cookies
-    const server = cookieStore.get("db_server")?.value;
-    const database = cookieStore.get("db_database")?.value;
+    const host = cookieStore.get("db_host")?.value;
+    const port = cookieStore.get("db_port")?.value;
     const user = cookieStore.get("db_user")?.value;
-    const encrypt = cookieStore.get("db_encrypt")?.value || "false";
+    const database = cookieStore.get("db_database")?.value;
+    const encrypt = cookieStore.get("db_encrypt")?.value ?? "false";
 
-    if (!server || !database || !user) {
-      const response: ApiResponse<ConnectionState> = {
+    if (!host || !port || !user || !database) {
+      return NextResponse.json<ApiResponse<ConnectionState>>({
         success: true,
         data: {
           isConnected: false,
           error: "Connection information not found",
         },
-      };
-
-      return NextResponse.json(response);
+      });
     }
 
-    // Set environment variables from cookies
-    process.env.SQL_SERVER = server;
-    process.env.SQL_DATABASE = database;
+    process.env.SQL_SERVER = host;
+    process.env.SQL_PORT = port;
     process.env.SQL_USER = user;
+    process.env.SQL_DATABASE = database;
     process.env.SQL_ENCRYPT = encrypt;
 
-    // Password is NOT stored in cookies for security
-    // This is just to verify that we can still connect (password needed)
     try {
-      // Attempt connection - user must re-enter password if needed
       const connection = await connectToDatabase();
       const schema = await getDatabaseSchema(connection);
       await closeConnection(connection);
 
-      const response: ApiResponse<ConnectionState> = {
+      return NextResponse.json<ApiResponse<ConnectionState>>({
         success: true,
         data: {
           isConnected: true,
           connection: {
-            server,
+            host,
+            port: parseInt(port, 10),
             user,
-            password: "******", // Masked
+            password: "******",
             database,
-            encrypt: encrypt === "true",
           },
           schema,
         },
-      };
-
-      return NextResponse.json(response);
-    } catch (dbError) {
-      const response: ApiResponse<ConnectionState> = {
+      });
+    } catch {
+      return NextResponse.json<ApiResponse<ConnectionState>>({
         success: true,
         data: {
           isConnected: false,
           error: "Database connection failed, please reconnect",
         },
-      };
-
-      return NextResponse.json(response);
+      });
     }
   } catch (error) {
     console.error("Error checking connection status:", error);
 
-    const response: ApiResponse<ConnectionState> = {
-      success: false,
-      error: "Failed to check connection status",
-    };
-
-    return NextResponse.json(response, { status: 500 });
+    return NextResponse.json<ApiResponse<ConnectionState>>(
+      {
+        success: false,
+        error: "Failed to check connection status",
+      },
+      { status: 500 }
+    );
   }
 }

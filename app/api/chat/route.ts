@@ -8,16 +8,16 @@ import { generateSqlFromNaturalLanguage } from "@/lib/groq";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { ApiResponse, QueryResult } from "@/lib/types";
-import sql from "mssql"; // Required for sql.VarChar, etc.
 
 // Handle POST requests to /api/chat
 export async function POST(request: NextRequest) {
+  let connection;
   try {
-    // Parse request body
+    // Get the request data
     const requestData = await request.json();
     const { message } = requestData;
 
-    // Check if database is connected via cookie
+    // Check if we're connected to a database
     const cookieStore = cookies();
     const isConnected = cookieStore.get("db_connected")?.value === "true";
 
@@ -26,54 +26,58 @@ export async function POST(request: NextRequest) {
         success: false,
         error: "Not connected to any database. Please connect first.",
       };
+
       return NextResponse.json(response, { status: 400 });
     }
 
-    // Set required environment variables from cookies
-    const server = cookieStore.get("db_host")?.value || "";
+    // Set environment variables from cookies
+    const host = cookieStore.get("db_host")?.value || "";
+    const port = cookieStore.get("db_port")?.value || "3306";
     const user = cookieStore.get("db_user")?.value || "";
     const database = cookieStore.get("db_database")?.value || "";
 
-    // Set SQL Server env vars — password should be in env file
-    process.env.SQL_SERVER = server;
+    // Requires password to be set in the environment
+    process.env.SQL_SERVER = host;
+    process.env.SQL_PORT = port;
     process.env.SQL_USER = user;
     process.env.SQL_DATABASE = database;
 
-    // Connect to SQL Server
-    const connection = await connectToDatabase();
+    // Connect to the database
+    connection = await connectToDatabase();
 
+    // Get database schema
+    const schema = await getDatabaseSchema(connection);
+    console.log("Schema!!!!!!!!:", schema);
+    // Generate SQL query from natural language
+    const startTime = Date.now();
+    const sql = await generateSqlFromNaturalLanguage(message, schema);
+    console.log("SQL query generated:", sql);
+    let parseSql = JSON.parse(sql);
+    console.log("sql!!!!!!", parseSql);
+
+    // Execute the query
     try {
-      // Get database schema
-      const schema = await getDatabaseSchema();
-
-      // Generate SQL from message
-      const startTime = Date.now();
-      const sqlResult = await generateSqlFromNaturalLanguage(message, schema);
-      const parsedSql = JSON.parse(sqlResult);
-      const query = parsedSql.query;
-
-      console.log("Generated SQL:", query);
-
-      // Execute SQL query
-      const data = await executeQuery(query);
+      const data = await executeQuery(connection, parseSql.sql_query);
       const executionTime = Date.now() - startTime;
 
       const response: ApiResponse<QueryResult> = {
         success: true,
         data: {
-          sql: query,
+          sql,
           data,
           executionTime,
         },
       };
+
       return NextResponse.json(response);
     } catch (queryError) {
-      const executionTime = Date.now() - Date.now();
+      const executionTime = Date.now() - startTime;
+      console.error("Query execution error:", queryError);
 
       const response: ApiResponse<QueryResult> = {
         success: true,
         data: {
-          sql: "",
+          sql,
           error:
             queryError instanceof Error
               ? queryError.message
@@ -81,18 +85,22 @@ export async function POST(request: NextRequest) {
           executionTime,
         },
       };
+
       return NextResponse.json(response);
-    } finally {
-      // Close SQL connection pool
-      await closeConnection();
     }
   } catch (error) {
-    console.error("Chat request error:", error);
+    console.error("Error processing chat request:", error);
+
     const response: ApiResponse<null> = {
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to process request",
     };
+
     return NextResponse.json(response, { status: 500 });
+  } finally {
+    if (connection) {
+      await closeConnection(connection);
+    }
   }
 }

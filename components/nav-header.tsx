@@ -10,7 +10,7 @@ export function NavHeader() {
           <Link href="/" className="flex items-center gap-2">
             <Database className="h-6 w-6" />
             <span className="hidden font-bold sm:inline-block">
-              SQL Whisperer
+              WASH Plateform
             </span>
           </Link>
         </div>
@@ -21,15 +21,6 @@ export function NavHeader() {
           >
             <MessagesSquare className="mr-2 h-4 w-4" />
             <span>Chat</span>
-          </Link>
-          <Link
-            href="https://github.com/yourusername/sql-whisperer"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <Github className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline-block">GitHub</span>
           </Link>
           <ThemeToggle />
         </div>

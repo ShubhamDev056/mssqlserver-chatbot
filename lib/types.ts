@@ -11,13 +11,11 @@ export interface Message {
 
 // Database connection types
 export interface DatabaseConnection {
-  // host: string;
-  server: string;
-  // port: number;
+  host: string;
+  port: number;
   user: string;
   password: string;
   database: string;
-  encrypt: boolean;
 }
 
 // Database schema

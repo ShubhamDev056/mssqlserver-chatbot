@@ -58,41 +58,36 @@ export async function generateSqlFromNaturalLanguage(
   }
 ): Promise<string> {
   try {
-    // Create Groq client
     const groq = createGroqClient();
-
-    // Format schema information for the prompt
     const schemaText = formatSchemaForPrompt(schema);
+    console.log("first schemaText:", schemaText);
 
-    // Send request to Groq
     const response = await groq.chat.completions.create({
       messages: [
         { role: "system", content: SQL_SYSTEM_PROMPT },
         {
           role: "user",
-          content: `DATABASE SCHEMA:\n${schemaText}\n\nNATURAL LANGUAGE QUERY: ${naturalLanguageQuery}\n\nSQL QUERY:`,
+          content: `DATABASE SCHEMA:\n${schemaText}\n\nNATURAL LANGUAGE QUERY: ${naturalLanguageQuery}\n\nRespond with a JSON object that contains the corresponding SQL query in a field called "sql_query". Return the SQL query in a single line without any line breaks. Example: { "sql_query": "SELECT * FROM users;" }`,
         },
       ],
-      model: "llama3-70b-8192",
+      model: "llama3-8b-8192",
       temperature: 0.2,
       max_tokens: 1024,
       response_format: { type: "json_object" },
     });
 
-    // Parse response to extract SQL
     const content = response.choices[0]?.message?.content || "";
+    console.log("content!!!:", content);
     try {
       const parsedContent = JSON.parse(content);
       const validatedResponse = SqlResponseSchema.parse(parsedContent);
       return validatedResponse.sql.trim();
     } catch (parseError) {
-      // Fallback: Try to extract SQL directly from the content if JSON parsing fails
       const sqlMatch = content.match(/```sql\s*([\s\S]*?)\s*```/);
       if (sqlMatch && sqlMatch[1]) {
         return sqlMatch[1].trim();
       }
 
-      // If all extraction methods fail, return the raw content
       return content.trim();
     }
   } catch (error) {
@@ -106,17 +101,18 @@ function formatSchemaForPrompt(schema: {
   tables: { table_name: string; table_schema: string }[];
   columns: { table_name: string; column_name: string; data_type: string }[];
 }): string {
-  // Group columns by table
+  // Group columns by full table name including schema
   const tableColumns: Record<
     string,
     { column_name: string; data_type: string }[]
   > = {};
 
   for (const column of schema.columns) {
-    if (!tableColumns[column.table_name]) {
-      tableColumns[column.table_name] = [];
+    const tableName = column.table_name; // already includes schema prefix like "sbm.project_details"
+    if (!tableColumns[tableName]) {
+      tableColumns[tableName] = [];
     }
-    tableColumns[column.table_name].push({
+    tableColumns[tableName].push({
       column_name: column.column_name,
       data_type: column.data_type,
     });
@@ -126,9 +122,10 @@ function formatSchemaForPrompt(schema: {
   let schemaText = "";
 
   for (const table of schema.tables) {
-    schemaText += `Table: ${table.table_name}\n`;
+    const fullTableName = `${table.table_schema}.${table.table_name}`;
+    schemaText += `Table: ${fullTableName}\n`;
 
-    const columns = tableColumns[table.table_name] || [];
+    const columns = tableColumns[fullTableName] || [];
     for (const column of columns) {
       schemaText += `  - ${column.column_name} (${column.data_type})\n`;
     }

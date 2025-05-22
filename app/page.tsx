@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <NavHeader />
-      
+
       <main className="flex-1">
         {/* Hero Section */}
         <section className="py-12 md:py-24 lg:py-32 w-full">
@@ -20,11 +20,16 @@ export default function Home() {
                     Talk to Your Database Using AI
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                    Transform natural language into SQL queries and extract insights from your data with the power of AI. No SQL knowledge required.
+                    Transform natural language into SQL queries and extract
+                    insights from your data with the power of AI. No SQL
+                    knowledge required.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <Link href="/chat" className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                  <Link
+                    href="/chat"
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                  >
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -36,18 +41,21 @@ export default function Home() {
             </div>
           </div>
         </section>
-        
+
         {/* Features Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/40">
-          <div className="container px-4 md:px-6">
+          <div className=" px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">Key Features</div>
+                <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">
+                  Key Features
+                </div>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">
                   Natural Language to SQL
                 </h2>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Extract insights from your database without writing a single line of SQL.
+                  Extract insights from your database without writing a single
+                  line of SQL.
                 </p>
               </div>
             </div>
@@ -57,9 +65,12 @@ export default function Home() {
                   <MessageSquareText className="h-6 w-6" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold">Natural Language Queries</h3>
+                  <h3 className="text-xl font-bold">
+                    Natural Language Queries
+                  </h3>
                   <p className="text-muted-foreground">
-                    Ask questions in plain English and get accurate SQL queries generated automatically.
+                    Ask questions in plain English and get accurate SQL queries
+                    generated automatically.
                   </p>
                 </div>
               </div>
@@ -70,7 +81,8 @@ export default function Home() {
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold">Interactive Results</h3>
                   <p className="text-muted-foreground">
-                    View query results in beautifully formatted tables with sorting, filtering, and export options.
+                    View query results in beautifully formatted tables with
+                    sorting, filtering, and export options.
                   </p>
                 </div>
               </div>
@@ -81,7 +93,8 @@ export default function Home() {
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold">Instant Insights</h3>
                   <p className="text-muted-foreground">
-                    Generate complex SQL queries in seconds that would take minutes or hours to write manually.
+                    Generate complex SQL queries in seconds that would take
+                    minutes or hours to write manually.
                   </p>
                 </div>
               </div>
@@ -89,11 +102,11 @@ export default function Home() {
           </div>
         </section>
       </main>
-      
+
       <footer className="w-full py-6 border-t">
-        <div className="container flex flex-col items-center justify-center gap-4 px-4 md:flex-row md:gap-6 md:px-6">
+        <div className="flex flex-col items-center justify-center gap-4 px-4 md:flex-row md:gap-6 md:px-6">
           <p className="text-center text-sm text-muted-foreground">
-            © 2025 SQL Whisperer. All rights reserved.
+            © 2025 WASH Platform. All rights reserved.
           </p>
         </div>
       </footer>
